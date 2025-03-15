@@ -12,6 +12,7 @@ pyvenv.cfg
 .venv
 pip-selfcheck.json
 .idea
+*.DS_Store
 *.task
 ### VirtualEnv template
 # Virtualenv

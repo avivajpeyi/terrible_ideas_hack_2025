@@ -2,3 +2,5 @@ mediapipe
 opencv-python
 keyboard
 pyttsx3
+pygame
+pyserial
