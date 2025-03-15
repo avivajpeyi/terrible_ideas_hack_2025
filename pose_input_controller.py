@@ -7,18 +7,23 @@ import cv2
 import time
 import numpy as np
 from mediapipe.framework.formats import landmark_pb2
+import sys
+import keyboard
+import subprocess
+import pyttsx3
+
 # -------------------------------
 # Model and Camera Initialization
 # -------------------------------
-MODEL_URL = 'https://storage.googleapis.com/mediapipe-models/pose_landmarker/pose_landmarker_heavy/float16/1/pose_landmarker_heavy.task'
+MODEL_URL = 'https://storage.googleapis.com/mediapipe-models/pose_landmarker/pose_landmarker_lite/float16/latest/pose_landmarker_lite.task'
 MODEL_PATH = 'pose_landmarker.task'
 
 
 class PoseInputController:
     def __init__(self,
                  camera_width=320, camera_height=240,
-                 left_threshold=0.25, right_threshold=0.75,
-                 up_threshold=0.25, down_threshold=0.75,
+                 left_threshold=0.3, right_threshold=1.0-0.3,
+                 up_threshold=0.35, down_threshold=1.0-0.35,
                  single_trigger=True):
         """
         Initializes the pose input controller.
@@ -37,6 +42,10 @@ class PoseInputController:
         self.down_threshold = down_threshold
         self.single_trigger = single_trigger
 
+        # text-to-speach flag
+        self.tts_engine = pyttsx3.init()
+        self.tts_engine.setProperty('rate', 150)  # Adjust speech speed if needed
+
         # Flags to allow single triggering per gesture
         self.triggered_right = False
         self.triggered_left = False
@@ -45,14 +54,23 @@ class PoseInputController:
 
         # Event queue to hold input events
         self.events = []
-
         # Setup camera
-        self.cap = cv2.VideoCapture(0)
+        if sys.platform == "darwin":
+            print("Running on macOS")
+            self.cap = cv2.VideoCapture(1)
+        elif sys.platform.startswith("win"):
+            print("Running on Windows")
+            self.cap = cv2.VideoCapture(0)
+        else:
+            print("Running on Linux")
+            self.cap = cv2.VideoCapture(0)
         self.cap.set(cv2.CAP_PROP_FRAME_WIDTH, self.camera_width)
         self.cap.set(cv2.CAP_PROP_FRAME_HEIGHT, self.camera_height)
         if not self.cap.isOpened():
             raise RuntimeError("Cannot open camera")
         print("Camera initialized")
+        # print the acquired camera name
+        print(self.cap.getBackendName())
 
         # Download model if not present
         if not os.path.exists(MODEL_PATH):
@@ -94,6 +112,13 @@ class PoseInputController:
             (23, 25), (25, 27),  # Left leg
             (24, 26), (26, 28)  # Right leg
         ]
+
+    def speak(self, text):
+        """
+        Uses text-to-speech to read out the detected movement.
+        """
+        self.tts_engine.say(text)
+        self.tts_engine.runAndWait()
 
     def draw_regions(self, image):
         """
@@ -182,15 +207,19 @@ class PoseInputController:
         # Trigger events only once until gesture resets.
         if right_trigger and not self.triggered_right:
             self.triggered_right = True
-            self.events.append("move_right")
-            print("Triggered move_right")
+            self.events.append("move_left")
+            print("Triggered move_left")
+            keyboard.press_and_release('left')
+            self.speak("left")
         if not right_trigger:
             self.triggered_right = False
 
         if left_trigger and not self.triggered_left:
             self.triggered_left = True
-            self.events.append("move_left")
-            print("Triggered move_left")
+            self.events.append("move_right")
+            print("Triggered move_right")
+            keyboard.press_and_release('right')
+            self.speak("right")
         if not left_trigger:
             self.triggered_left = False
 
@@ -198,6 +227,8 @@ class PoseInputController:
             self.triggered_up = True
             self.events.append("move_up")
             print("Triggered move_up")
+            keyboard.press_and_release('up')
+            self.speak("up")
         if not up_trigger:
             self.triggered_up = False
 
@@ -205,6 +236,8 @@ class PoseInputController:
             self.triggered_down = True
             self.events.append("move_down")
             print("Triggered move_down")
+            keyboard.press_and_release('down')
+            self.speak("down")
         if not down_trigger:
             self.triggered_down = False
 
