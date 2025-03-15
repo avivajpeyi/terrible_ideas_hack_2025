@@ -12,6 +12,14 @@ import keyboard
 import subprocess
 import pyttsx3
 
+if sys.platform == "darwin":
+    print("Running on macOS")
+elif sys.platform.startswith("win"):
+    print("Running on Windows")
+else:
+    print("Running on Linux")
+
+
 # -------------------------------
 # Model and Camera Initialization
 # -------------------------------
@@ -55,15 +63,7 @@ class PoseInputController:
         # Event queue to hold input events
         self.events = []
         # Setup camera
-        if sys.platform == "darwin":
-            print("Running on macOS")
-            self.cap = cv2.VideoCapture(1)
-        elif sys.platform.startswith("win"):
-            print("Running on Windows")
-            self.cap = cv2.VideoCapture(0)
-        else:
-            print("Running on Linux")
-            self.cap = cv2.VideoCapture(0)
+        self.cap = cv2.VideoCapture(0)
         self.cap.set(cv2.CAP_PROP_FRAME_WIDTH, self.camera_width)
         self.cap.set(cv2.CAP_PROP_FRAME_HEIGHT, self.camera_height)
         if not self.cap.isOpened():

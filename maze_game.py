@@ -124,10 +124,21 @@ def draw_end_screen(screen, stopwatch):
 def handle_movement():
     global current_dir
     keys = pygame.key.get_pressed()
-    if keys[pygame.K_a]: current_dir = (-5, 0)
-    if keys[pygame.K_d]: current_dir = (5, 0)
-    if keys[pygame.K_w]: current_dir = (0, -5)
-    if keys[pygame.K_s]: current_dir = (0, 5)
+
+    if keys[pygame.K_a] or keys[pygame.K_LEFT]:
+        print("LEFT")
+        current_dir = (-5, 0)
+    if keys[pygame.K_d] or keys[pygame.K_RIGHT]:
+        print("RIGHT")
+        current_dir = (5, 0)
+
+    if keys[pygame.K_w] or keys[pygame.K_UP]:
+        print("UP")
+        current_dir = (0, -5)
+
+    if keys[pygame.K_s] or keys[pygame.K_DOWN]:
+        print("DOWN")
+        current_dir = (0, 5)
 
 
 def move_player():
