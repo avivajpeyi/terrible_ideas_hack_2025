@@ -120,6 +120,8 @@ class PoseInputController:
             landmark_coords[idx] = (x_px, y_px)
             if idx in key_landmarks:
                 cv2.circle(image, (x_px, y_px), circle_radius, color, -1)
+            if idx ==0:
+                cv2.circle(image, (x_px, y_px), circle_radius, (255,0,0), -1)
         for start_idx, end_idx in self.STICK_CONNECTIONS:
             if start_idx in landmark_coords and end_idx in landmark_coords:
                 cv2.line(image, landmark_coords[start_idx], landmark_coords[end_idx], color, thickness)
@@ -138,9 +140,13 @@ class PoseInputController:
         right_wrist = pose_landmarks[16]
         nose = pose_landmarks[0]
 
-        if left_wrist.x >= self.right_threshold and right_wrist.x >= self.right_threshold:
+        # if left_wrist.x >= self.right_threshold and right_wrist.x >= self.right_threshold:
+        #     right_trigger = True
+        # if left_wrist.x <= self.left_threshold and right_wrist.x <= self.left_threshold:
+        #     left_trigger = True
+        if nose.x >= self.right_threshold:
             right_trigger = True
-        if left_wrist.x <= self.left_threshold and right_wrist.x <= self.left_threshold:
+        if nose.x <= self.left_threshold:
             left_trigger = True
         if nose.y <= self.up_threshold:
             up_trigger = True

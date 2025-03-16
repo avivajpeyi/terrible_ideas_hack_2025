@@ -1,17 +1,22 @@
 import pygame
 from random import choice
 from collections import deque
+from pyduino_controller import PyduinoController
 
 # Initialize pygame
 pygame.init()
+ARDUINO = PyduinoController()
 
 # Game constants
-RES = WIDTH, HEIGHT = 1000, 700
+RES = WIDTH, HEIGHT = 1100, 700
 TILE = 100
 cols, rows = WIDTH // TILE, HEIGHT // TILE
 end_point = (cols - 1, rows - 1)  # Bottom-right corner
 FPS = 60
 
+
+OUCH_SFX = pygame.mixer.Sound('sfx/ouch.mp3')
+YAY_SFX = pygame.mixer.Sound('sfx/yay.mp3')
 
 class Cell:
     def __init__(self, x, y):
@@ -93,6 +98,19 @@ def get_next_direction():
     }.get((dx, dy), '')
 
 
+def send_direction_to_arduino(direction:str):
+    if direction == 'RIGHT':
+        ARDUINO.send_command('R')
+    elif direction == 'LEFT':
+        ARDUINO.send_command('L')
+    elif direction == 'UP':
+        ARDUINO.send_command('U')
+    elif direction == 'DOWN':
+        ARDUINO.send_command('D')
+
+
+
+
 def draw_interface(screen, stopwatch, next_dir):
     # Draw stopwatch
     time_text = pygame.font.SysFont('Arial', 40).render(
@@ -103,6 +121,9 @@ def draw_interface(screen, stopwatch, next_dir):
     dir_text = pygame.font.SysFont('Arial', 60).render(
         f"Next: {next_dir}", True, pygame.Color('limegreen'))
     screen.blit(dir_text, (WIDTH // 2 - 100, 20))
+
+    # convert next_dir to an int [0, 3]
+    send_direction_to_arduino(next_dir)
 
 
 def draw_end_screen(screen, stopwatch):
@@ -146,6 +167,10 @@ def move_player():
         new_pos = player_rect.move(current_dir)
         if not new_pos.collidelist(walls_collide_list) != -1:
             player_rect.move_ip(current_dir)
+        # else: # if colliding with wall..
+        #     ARDUINO.send_command('C') # send command to arduino to play a sound
+        #     OUCH_SFX.play()
+
 
 
 
@@ -256,6 +281,8 @@ def main():
     clock = pygame.time.Clock()
     initialize_game()
 
+    yay_played = False
+
     while True:
         screen.fill(pygame.Color('black'))
 
@@ -266,6 +293,7 @@ def main():
             if event.type == pygame.KEYDOWN:
                 if not game_active and event.key == pygame.K_r:
                     initialize_game()
+                    yay_played = False
 
         if game_active:
             handle_movement()
@@ -309,6 +337,10 @@ def main():
 
         if not game_active:
             draw_end_screen(screen, stopwatch)
+            if not yay_played:
+                YAY_SFX.play()
+                ARDUINO.send_command('F')
+                yay_played = True
 
         pygame.display.flip()
         clock.tick(FPS)
