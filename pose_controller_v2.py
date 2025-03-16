@@ -29,7 +29,7 @@ class PoseInputController:
     def __init__(self,
                  camera_width=320, camera_height=240,
                  left_threshold=0.3, right_threshold=1.0-0.3,
-                 up_threshold=0.35, down_threshold=1.0-0.35,
+                 up_threshold=0.35, down_threshold=1.0-0.25,
                  single_trigger=True):
         self.camera_width = camera_width
         self.camera_height = camera_height

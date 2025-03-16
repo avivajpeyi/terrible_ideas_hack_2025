@@ -2,21 +2,24 @@ import pygame
 from random import choice
 from collections import deque
 from pyduino_controller import PyduinoController
+import pygame
+from pygame import mixer
 
 # Initialize pygame
 pygame.init()
+mixer.init()
 ARDUINO = PyduinoController()
 
 # Game constants
-RES = WIDTH, HEIGHT = 1100, 700
+RES = WIDTH, HEIGHT = 900, 700
 TILE = 100
 cols, rows = WIDTH // TILE, HEIGHT // TILE
 end_point = (cols - 1, rows - 1)  # Bottom-right corner
 FPS = 60
 
-
-OUCH_SFX = pygame.mixer.Sound('sfx/ouch.mp3')
-YAY_SFX = pygame.mixer.Sound('sfx/yay.mp3')
+# MUSIC =  mixer.music.load("path/to/your/music.mp3")
+OUCH_SFX = mixer.Sound('sfx/ouch.mp3')
+YAY_SFX = mixer.Sound('sfx/yay.mp3')
 
 class Cell:
     def __init__(self, x, y):

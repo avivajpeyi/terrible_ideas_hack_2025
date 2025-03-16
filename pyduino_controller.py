@@ -1,7 +1,7 @@
 import serial.tools.list_ports
 import time
 
-DEFAULT_PORT = "/dev/cu.usbserial-14230"
+DEFAULT_PORT = "/dev/cu.usbserial-14130"
 
 class PyduinoController:
     def __init__(self, port=DEFAULT_PORT, baud_rate=115200):
@@ -29,7 +29,7 @@ class PyduinoController:
 if __name__ == "__main__":
 
     arduino_controller = PyduinoController()
-    arduino_controller.send_command("D")
+    print(arduino_controller.send_command("L"))
 
     # print("Sending commands to Arduino")
     # commands = ["R", "L", "U", "D", "F"]
