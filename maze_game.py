@@ -25,6 +25,10 @@ FPS = 60
 # SOUND EFFECTS
 OUCH_SFX = mixer.Sound('sfx/ouch.mp3')
 YAY_SFX = mixer.Sound('sfx/yay.mp3')
+# New threshold sounds
+THRESHOLD_25_SFX = mixer.Sound('sfx/yay.mp3')
+THRESHOLD_50_SFX = mixer.Sound('sfx/yay.mp3')
+THRESHOLD_75_SFX = mixer.Sound('sfx/yay.mp3')
 
 
 class Cell:
@@ -221,6 +225,7 @@ def show_histogram(current_time):
 
 def initialize_game():
     global maze, path, directions, player_rect, current_dir, game_active, stopwatch, total_path, time_saved, histogram_shown
+    global played_25, played_50, played_75
     maze = generate_maze()
     path = find_shortest_path(maze)
     total_path = path.copy()
@@ -231,6 +236,10 @@ def initialize_game():
     stopwatch = Stopwatch()
     time_saved = False       # To ensure we save time only once per completion
     histogram_shown = False  # To show histogram only once after game over
+    # Initialize threshold flags
+    played_25 = False
+    played_50 = False
+    played_75 = False
 
 
 def find_current_path():
@@ -293,117 +302,4 @@ def draw_end_screen(screen, stopwatch):
         "Press R to restart", True, pygame.Color('white'))
 
     screen.blit(text, (WIDTH // 2 - 250, HEIGHT // 2 - 60))
-    screen.blit(time_text, (WIDTH // 2 - 150, HEIGHT // 2 + 40))
-    screen.blit(restart_text, (WIDTH // 2 - 120, HEIGHT // 2 + 120))
-
-
-def handle_movement():
-    global current_dir
-    keys = pygame.key.get_pressed()
-
-    if keys[pygame.K_a] or keys[pygame.K_LEFT]:
-        print("LEFT")
-        current_dir = (-5, 0)
-    if keys[pygame.K_d] or keys[pygame.K_RIGHT]:
-        print("RIGHT")
-        current_dir = (5, 0)
-    if keys[pygame.K_w] or keys[pygame.K_UP]:
-        print("UP")
-        current_dir = (0, -5)
-    if keys[pygame.K_s] or keys[pygame.K_DOWN]:
-        print("DOWN")
-        current_dir = (0, 5)
-
-
-def move_player():
-    if game_active and current_dir != (0, 0):
-        new_pos = player_rect.move(current_dir)
-        if new_pos.collidelist(walls_collide_list) == -1:
-            player_rect.move_ip(current_dir)
-        # You could add collision handling here (sound effects, etc.)
-
-
-def main():
-    global game_active, walls_collide_list, time_saved, histogram_shown
-
-    screen = pygame.display.set_mode((WIDTH, HEIGHT))
-    clock = pygame.time.Clock()
-    initialize_game()
-    yay_played = False
-
-    while True:
-        screen.fill(pygame.Color('black'))
-
-        for event in pygame.event.get():
-            if event.type == pygame.QUIT:
-                pygame.quit()
-                return
-            if event.type == pygame.KEYDOWN:
-                if not game_active and event.key == pygame.K_r:
-                    initialize_game()
-                    yay_played = False
-
-        if game_active:
-            handle_movement()
-            move_player()
-
-            # Update collisions and path
-            walls_collide_list = sum([cell.get_rects() for cell in maze], [])
-            # Check for completion (player reaches end point)
-            if player_rect.colliderect(pygame.Rect(end_point[0] * TILE, end_point[1] * TILE, TILE, TILE)):
-                game_active = False
-                stopwatch.running = False
-        else:
-            # When game ends, save the completion time only once.
-            if not time_saved:
-                comp_time = stopwatch.get_time() / 1000.0  # Convert milliseconds to seconds
-                save_completion_time(comp_time)
-                time_saved = True
-
-            draw_end_screen(screen, stopwatch)
-            if not yay_played:
-                YAY_SFX.play()
-                if ARDUINO:
-                    ARDUINO.send_command('F')
-                yay_played = True
-
-            # Show the histogram only once after game completion.
-            if not histogram_shown:
-                current_time_sec = stopwatch.get_time() / 1000.0
-                show_histogram(current_time_sec)
-                histogram_shown = True
-
-        # Draw maze
-        for cell in maze:
-            cell.draw(screen)
-
-        # Draw player and endpoint
-        pygame.draw.rect(screen, pygame.Color('red'),
-                         (end_point[0] * TILE + 10, end_point[1] * TILE + 10, TILE - 20, TILE - 20))
-        pygame.draw.rect(screen, pygame.Color('cyan'), player_rect)
-
-        # Draw current path as a dotted line
-        current_path = find_current_path()
-        if current_path:
-            path_points = [(x * TILE + TILE // 2, y * TILE + TILE // 2) for (x, y) in current_path]
-            for i in range(len(path_points) - 1):
-                start = path_points[i]
-                end = path_points[i + 1]
-                num_dots = int(((end[0] - start[0]) ** 2 + (end[1] - start[1]) ** 2) ** 0.5 // 10)
-                for j in range(num_dots):
-                    t = j / num_dots
-                    dot_x = int(start[0] + t * (end[0] - start[0]))
-                    dot_y = int(start[1] + t * (end[1] - start[1]))
-                    pygame.draw.circle(screen, pygame.Color('limegreen'), (dot_x, dot_y), 2)
-
-        percent_complete = get_current_path_completion_percentage(current_path)
-        next_dir = get_next_direction() if game_active else ""
-        send_direction_to_arduino(next_dir)
-        draw_interface(screen, stopwatch, next_dir, percent_complete)
-
-        pygame.display.flip()
-        clock.tick(FPS)
-
-
-if __name__ == "__main__":
-    main()
+    screen.blit(time_text, (WIDTH // 2 - 150, HEIGHT // 2 +_
