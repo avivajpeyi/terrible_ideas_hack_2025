@@ -9,10 +9,12 @@ from pygame import mixer
 pygame.init()
 mixer.init()
 
+# Attempt to initialize the Arduino controller.
+# If it fails, ARDUINO will be set to None and the game continues without Arduino integration.
 try:
     ARDUINO = PyduinoController()
 except Exception as e:
-    print(e)
+    print("Arduino not found or failed to initialize:", e)
     ARDUINO = None
 
 # Game constants
@@ -234,8 +236,8 @@ def initialize_game():
     current_dir = (0, 0)
     game_active = True
     stopwatch = Stopwatch()
-    time_saved = False       # To ensure we save time only once per completion
-    histogram_shown = False  # To show histogram only once after game over
+    time_saved = False       # Ensure we save time only once per completion
+    histogram_shown = False  # Show histogram only once after game over
     # Initialize threshold flags
     played_25 = False
     played_50 = False
@@ -262,6 +264,7 @@ def get_next_direction():
 
 
 def send_direction_to_arduino(direction: str):
+    # Only send commands if the ARDUINO is initialized.
     if ARDUINO is None:
         return
     if direction == 'RIGHT':
@@ -329,7 +332,7 @@ def move_player():
         new_pos = player_rect.move(current_dir)
         if new_pos.collidelist(walls_collide_list) == -1:
             player_rect.move_ip(current_dir)
-        # You could add collision handling here (sound effects, etc.)
+        # Collision handling (sound effects, etc.) can be added here
 
 
 def main():
@@ -373,6 +376,7 @@ def main():
             draw_end_screen(screen, stopwatch)
             if not yay_played:
                 YAY_SFX.play()
+                # Only send the finish command if ARDUINO exists.
                 if ARDUINO:
                     ARDUINO.send_command('F')
                 yay_played = True
