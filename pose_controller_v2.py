@@ -23,7 +23,7 @@ else:
 # Model and Camera Initialization
 # -------------------------------
 MODEL_URL = 'https://storage.googleapis.com/mediapipe-models/pose_landmarker/pose_landmarker_lite/float16/latest/pose_landmarker_lite.task'
-MODEL_PATH = 'pose_landmarker.task'
+MODEL_PATH = 'models/pose_landmarker.task'
 
 class PoseInputController:
     def __init__(self,
@@ -49,7 +49,20 @@ class PoseInputController:
         self.current_key = None  # Track currently pressed key
 
         self.events = []
+
+        # print all cameras available
+        print("Available cameras:")
+        for i in range(5):
+            cap = cv2.VideoCapture(i)
+            if cap.isOpened():
+                print(f"Camera {i} is available")
+                cap.release()
+            else:
+                print(f"Camera {i} is not available")
+
         self.cap = cv2.VideoCapture(0)
+
+
         self.cap.set(cv2.CAP_PROP_FRAME_WIDTH, self.camera_width)
         self.cap.set(cv2.CAP_PROP_FRAME_HEIGHT, self.camera_height)
         if not self.cap.isOpened():

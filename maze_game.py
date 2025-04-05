@@ -1,14 +1,19 @@
 import pygame
+import matplotlib.pyplot as plt  # For histogram plotting
 from random import choice
 from collections import deque
 from pyduino_controller import PyduinoController
-import pygame
 from pygame import mixer
 
-# Initialize pygame
+# Initialize pygame and mixer
 pygame.init()
 mixer.init()
-ARDUINO = PyduinoController()
+
+try:
+    ARDUINO = PyduinoController()
+except Exception as e:
+    print(e)
+    ARDUINO = None
 
 # Game constants
 RES = WIDTH, HEIGHT = 900, 700
@@ -17,9 +22,10 @@ cols, rows = WIDTH // TILE, HEIGHT // TILE
 end_point = (cols - 1, rows - 1)  # Bottom-right corner
 FPS = 60
 
-# MUSIC =  mixer.music.load("path/to/your/music.mp3")
+# SOUND EFFECTS
 OUCH_SFX = mixer.Sound('sfx/ouch.mp3')
 YAY_SFX = mixer.Sound('sfx/yay.mp3')
+
 
 class Cell:
     def __init__(self, x, y):
@@ -70,111 +76,6 @@ class Cell:
         if bottom and not bottom.visited: neighbors.append(bottom)
         if left and not left.visited: neighbors.append(left)
         return choice(neighbors) if neighbors else False
-
-
-def initialize_game():
-    global maze, path, directions, player_rect, current_dir, game_active, stopwatch
-    maze = generate_maze()
-    path = find_shortest_path(maze)
-    directions = get_directions(path)
-    player_rect = pygame.Rect(TILE // 2 - 15, TILE // 2 - 15, 30, 30)  # Smaller player
-    current_dir = (0, 0)
-    game_active = True
-    stopwatch = Stopwatch()
-
-
-def find_current_path():
-    px, py = player_rect.centerx // TILE, player_rect.centery // TILE
-    return find_shortest_path(maze, (px, py), end_point)
-
-
-def get_next_direction():
-    current_path = find_current_path()
-    if len(current_path) < 2: return ""
-    dx = current_path[1][0] - current_path[0][0]
-    dy = current_path[1][1] - current_path[0][1]
-    return {
-        (1, 0): 'RIGHT',
-        (-1, 0): 'LEFT',
-        (0, 1): 'DOWN',
-        (0, -1): 'UP'
-    }.get((dx, dy), '')
-
-
-def send_direction_to_arduino(direction:str):
-    if direction == 'RIGHT':
-        ARDUINO.send_command('R')
-    elif direction == 'LEFT':
-        ARDUINO.send_command('L')
-    elif direction == 'UP':
-        ARDUINO.send_command('U')
-    elif direction == 'DOWN':
-        ARDUINO.send_command('D')
-
-
-
-
-def draw_interface(screen, stopwatch, next_dir):
-    # Draw stopwatch
-    time_text = pygame.font.SysFont('Arial', 40).render(
-        f"Time: {stopwatch.format_time()}", True, pygame.Color('white'))
-    screen.blit(time_text, (20, 20))
-
-    # Draw direction suggestion
-    dir_text = pygame.font.SysFont('Arial', 60).render(
-        f"Next: {next_dir}", True, pygame.Color('limegreen'))
-    screen.blit(dir_text, (WIDTH // 2 - 100, 20))
-
-    # convert next_dir to an int [0, 3]
-    send_direction_to_arduino(next_dir)
-
-
-def draw_end_screen(screen, stopwatch):
-    overlay = pygame.Surface((WIDTH, HEIGHT), pygame.SRCALPHA)
-    overlay.fill((0, 0, 0, 200))
-    screen.blit(overlay, (0, 0))
-
-    text = pygame.font.SysFont('Arial', 80).render("MAZE SOLVED!", True, pygame.Color('yellow'))
-    time_text = pygame.font.SysFont('Arial', 60).render(
-        f"Time: {stopwatch.format_time()}", True, pygame.Color('yellow'))
-    restart_text = pygame.font.SysFont('Arial', 40).render(
-        "Press R to restart", True, pygame.Color('white'))
-
-    screen.blit(text, (WIDTH // 2 - 250, HEIGHT // 2 - 60))
-    screen.blit(time_text, (WIDTH // 2 - 150, HEIGHT // 2 + 40))
-    screen.blit(restart_text, (WIDTH // 2 - 120, HEIGHT // 2 + 120))
-
-
-def handle_movement():
-    global current_dir
-    keys = pygame.key.get_pressed()
-
-    if keys[pygame.K_a] or keys[pygame.K_LEFT]:
-        print("LEFT")
-        current_dir = (-5, 0)
-    if keys[pygame.K_d] or keys[pygame.K_RIGHT]:
-        print("RIGHT")
-        current_dir = (5, 0)
-
-    if keys[pygame.K_w] or keys[pygame.K_UP]:
-        print("UP")
-        current_dir = (0, -5)
-
-    if keys[pygame.K_s] or keys[pygame.K_DOWN]:
-        print("DOWN")
-        current_dir = (0, 5)
-
-
-def move_player():
-    if game_active and current_dir != (0, 0):
-        new_pos = player_rect.move(current_dir)
-        if not new_pos.collidelist(walls_collide_list) != -1:
-            player_rect.move_ip(current_dir)
-        # else: # if colliding with wall..
-        #     ARDUINO.send_command('C') # send command to arduino to play a sound
-        #     OUCH_SFX.play()
-
-
 
 
 def remove_walls(current, next):
@@ -276,14 +177,158 @@ class Stopwatch:
         return f"{m:02}:{s:02}"
 
 
+def get_current_path_completion_percentage(current_path) -> int:
+    return 100 - int(round(len(current_path) / len(total_path) * 100))
+
+
+# --- Functions to save and display completion times ---
+
+def save_completion_time(time_seconds):
+    """Append the completion time (in seconds) to a tex file."""
+    with open("completion_times.tex", "a") as f:
+        f.write(f"{time_seconds}\n")
+
+
+def load_completion_times():
+    """Load all completion times from the tex file."""
+    times = []
+    try:
+        with open("completion_times.tex", "r") as f:
+            for line in f:
+                try:
+                    times.append(float(line.strip()))
+                except ValueError:
+                    continue
+    except FileNotFoundError:
+        pass
+    return times
+
+
+def show_histogram(current_time):
+    """Display a histogram of all completion times with a vertical line for the current time."""
+    times = load_completion_times()
+    plt.hist(times, bins=10, color='skyblue', edgecolor='black')
+    plt.axvline(current_time, color='red', linestyle='dashed', linewidth=2,
+                label=f"Current Time: {current_time:.2f}s")
+    plt.xlabel("Completion Time (seconds)")
+    plt.ylabel("Frequency")
+    plt.title("Completion Times Histogram")
+    plt.legend()
+    plt.show()
+
+
+# --- Game-related functions ---
+
+def initialize_game():
+    global maze, path, directions, player_rect, current_dir, game_active, stopwatch, total_path, time_saved, histogram_shown
+    maze = generate_maze()
+    path = find_shortest_path(maze)
+    total_path = path.copy()
+    directions = get_directions(path)
+    player_rect = pygame.Rect(TILE // 2 - 15, TILE // 2 - 15, 30, 30)  # Smaller player
+    current_dir = (0, 0)
+    game_active = True
+    stopwatch = Stopwatch()
+    time_saved = False       # To ensure we save time only once per completion
+    histogram_shown = False  # To show histogram only once after game over
+
+
+def find_current_path():
+    px, py = player_rect.centerx // TILE, player_rect.centery // TILE
+    return find_shortest_path(maze, (px, py), end_point)
+
+
+def get_next_direction():
+    current_path = find_current_path()
+    if len(current_path) < 2:
+        return ""
+    dx = current_path[1][0] - current_path[0][0]
+    dy = current_path[1][1] - current_path[0][1]
+    return {
+        (1, 0): 'RIGHT',
+        (-1, 0): 'LEFT',
+        (0, 1): 'DOWN',
+        (0, -1): 'UP'
+    }.get((dx, dy), '')
+
+
+def send_direction_to_arduino(direction: str):
+    if ARDUINO is None:
+        return
+    if direction == 'RIGHT':
+        ARDUINO.send_command('R')
+    elif direction == 'LEFT':
+        ARDUINO.send_command('L')
+    elif direction == 'UP':
+        ARDUINO.send_command('U')
+    elif direction == 'DOWN':
+        ARDUINO.send_command('D')
+
+
+def draw_interface(screen, stopwatch, next_dir, percent_complete):
+    # Draw stopwatch
+    time_text = pygame.font.SysFont('Arial', 40).render(
+        f"Time: {stopwatch.format_time()}", True, pygame.Color('white'))
+    screen.blit(time_text, (20, 20))
+
+    # Draw direction suggestion
+    dir_text = pygame.font.SysFont('Arial', 60).render(
+        f"Next: {next_dir}", True, pygame.Color('limegreen'))
+    screen.blit(dir_text, (WIDTH // 2 - 100, 20))
+
+    percent_text = pygame.font.SysFont('Arial', 40).render(
+        f"Completion: {percent_complete}%", True, pygame.Color('white'))
+    screen.blit(percent_text, (WIDTH // 2 - 100, 100))
+
+
+def draw_end_screen(screen, stopwatch):
+    overlay = pygame.Surface((WIDTH, HEIGHT), pygame.SRCALPHA)
+    overlay.fill((0, 0, 0, 200))
+    screen.blit(overlay, (0, 0))
+
+    text = pygame.font.SysFont('Arial', 80).render("MAZE SOLVED!", True, pygame.Color('yellow'))
+    time_text = pygame.font.SysFont('Arial', 60).render(
+        f"Time: {stopwatch.format_time()}", True, pygame.Color('yellow'))
+    restart_text = pygame.font.SysFont('Arial', 40).render(
+        "Press R to restart", True, pygame.Color('white'))
+
+    screen.blit(text, (WIDTH // 2 - 250, HEIGHT // 2 - 60))
+    screen.blit(time_text, (WIDTH // 2 - 150, HEIGHT // 2 + 40))
+    screen.blit(restart_text, (WIDTH // 2 - 120, HEIGHT // 2 + 120))
+
+
+def handle_movement():
+    global current_dir
+    keys = pygame.key.get_pressed()
+
+    if keys[pygame.K_a] or keys[pygame.K_LEFT]:
+        print("LEFT")
+        current_dir = (-5, 0)
+    if keys[pygame.K_d] or keys[pygame.K_RIGHT]:
+        print("RIGHT")
+        current_dir = (5, 0)
+    if keys[pygame.K_w] or keys[pygame.K_UP]:
+        print("UP")
+        current_dir = (0, -5)
+    if keys[pygame.K_s] or keys[pygame.K_DOWN]:
+        print("DOWN")
+        current_dir = (0, 5)
+
+
+def move_player():
+    if game_active and current_dir != (0, 0):
+        new_pos = player_rect.move(current_dir)
+        if new_pos.collidelist(walls_collide_list) == -1:
+            player_rect.move_ip(current_dir)
+        # You could add collision handling here (sound effects, etc.)
+
 
 def main():
-    global game_active, walls_collide_list
+    global game_active, walls_collide_list, time_saved, histogram_shown
 
     screen = pygame.display.set_mode((WIDTH, HEIGHT))
     clock = pygame.time.Clock()
     initialize_game()
-
     yay_played = False
 
     while True:
@@ -304,9 +349,29 @@ def main():
 
             # Update collisions and path
             walls_collide_list = sum([cell.get_rects() for cell in maze], [])
+            # Check for completion (player reaches end point)
             if player_rect.colliderect(pygame.Rect(end_point[0] * TILE, end_point[1] * TILE, TILE, TILE)):
                 game_active = False
                 stopwatch.running = False
+        else:
+            # When game ends, save the completion time only once.
+            if not time_saved:
+                comp_time = stopwatch.get_time() / 1000.0  # Convert milliseconds to seconds
+                save_completion_time(comp_time)
+                time_saved = True
+
+            draw_end_screen(screen, stopwatch)
+            if not yay_played:
+                YAY_SFX.play()
+                if ARDUINO:
+                    ARDUINO.send_command('F')
+                yay_played = True
+
+            # Show the histogram only once after game completion.
+            if not histogram_shown:
+                current_time_sec = stopwatch.get_time() / 1000.0
+                show_histogram(current_time_sec)
+                histogram_shown = True
 
         # Draw maze
         for cell in maze:
@@ -317,33 +382,24 @@ def main():
                          (end_point[0] * TILE + 10, end_point[1] * TILE + 10, TILE - 20, TILE - 20))
         pygame.draw.rect(screen, pygame.Color('cyan'), player_rect)
 
-        # Draw current path
+        # Draw current path as a dotted line
         current_path = find_current_path()
         if current_path:
             path_points = [(x * TILE + TILE // 2, y * TILE + TILE // 2) for (x, y) in current_path]
-            # pygame.draw.lines(screen, pygame.Color('limegreen'), False, path_points, 3)
-            # Draw a dotted line
             for i in range(len(path_points) - 1):
                 start = path_points[i]
                 end = path_points[i + 1]
-                num_dots = int(((end[0] - start[0]) ** 2 + (end[1] - start[1]) ** 2) ** 0.5 // 10)  # Adjust dot spacing
+                num_dots = int(((end[0] - start[0]) ** 2 + (end[1] - start[1]) ** 2) ** 0.5 // 10)
                 for j in range(num_dots):
                     t = j / num_dots
                     dot_x = int(start[0] + t * (end[0] - start[0]))
                     dot_y = int(start[1] + t * (end[1] - start[1]))
-                    pygame.draw.circle(screen, pygame.Color('limegreen'), (dot_x, dot_y), 2)  # Adjust dot size
+                    pygame.draw.circle(screen, pygame.Color('limegreen'), (dot_x, dot_y), 2)
 
-
-        # Draw interface elements
+        percent_complete = get_current_path_completion_percentage(current_path)
         next_dir = get_next_direction() if game_active else ""
-        draw_interface(screen, stopwatch, next_dir)
-
-        if not game_active:
-            draw_end_screen(screen, stopwatch)
-            if not yay_played:
-                YAY_SFX.play()
-                ARDUINO.send_command('F')
-                yay_played = True
+        send_direction_to_arduino(next_dir)
+        draw_interface(screen, stopwatch, next_dir, percent_complete)
 
         pygame.display.flip()
         clock.tick(FPS)

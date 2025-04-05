@@ -1,7 +1,8 @@
 import serial.tools.list_ports
 import time
 
-DEFAULT_PORT = "/dev/cu.usbserial-14130"
+DEFAULT_PORT = "/dev/cu.usbserial-14230"
+
 
 class PyduinoController:
     def __init__(self, port=DEFAULT_PORT, baud_rate=115200):
@@ -17,6 +18,9 @@ class PyduinoController:
         time.sleep(2)  # Wait for the connection to establish
 
     def send_command(self, command):
+        if self.arduino is None:
+            return
+
         self.arduino.write(command.encode('utf-8'))  # Encode to bytes
         # time.sleep(0.05)  # Add a small delay to allow the Arduino to process the command
         if self.arduino.in_waiting > 0:
@@ -24,6 +28,8 @@ class PyduinoController:
             print(f"Received: {response}")
 
     def close(self):
+        if self.arduino is None:
+            return
         self.arduino.close()
 
 if __name__ == "__main__":
