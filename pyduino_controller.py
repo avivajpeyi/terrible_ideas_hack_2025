@@ -14,6 +14,7 @@ class PyduinoController:
             ports = serial.tools.list_ports.comports()
             for port in ports:
                 print(port.device)
+            self.arduino = None
 
         time.sleep(2)  # Wait for the connection to establish
 
