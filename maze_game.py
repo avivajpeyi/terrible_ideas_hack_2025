@@ -213,7 +213,7 @@ def load_completion_times():
 def show_histogram(current_time):
     """Display a histogram of all completion times with a vertical line for the current time."""
     times = load_completion_times()
-    plt.hist(times, bins=10, color='skyblue', edgecolor='black')
+    plt.hist(times, bins=50, color='skyblue')
     plt.axvline(current_time, color='red', linestyle='dashed', linewidth=2,
                 label=f"Current Time: {current_time:.2f}s")
     plt.xlabel("Completion Time (seconds)")

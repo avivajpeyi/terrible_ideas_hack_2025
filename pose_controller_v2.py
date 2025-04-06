@@ -12,6 +12,8 @@ import keyboard
 import subprocess
 import pyttsx3
 
+
+
 if sys.platform == "darwin":
     print("Running on macOS")
 elif sys.platform.startswith("win"):
@@ -28,8 +30,8 @@ MODEL_PATH = 'models/pose_landmarker.task'
 class PoseInputController:
     def __init__(self,
                  camera_width=320, camera_height=240,
-                 left_threshold=0.3, right_threshold=1.0-0.3,
-                 up_threshold=0.35, down_threshold=1.0-0.25,
+                 left_threshold=0.45, right_threshold=1.0-0.4,
+                 up_threshold=0.55, down_threshold=1.0-0.3,
                  single_trigger=True):
         self.camera_width = camera_width
         self.camera_height = camera_height

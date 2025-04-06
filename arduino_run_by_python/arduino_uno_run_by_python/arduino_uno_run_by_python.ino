@@ -19,10 +19,10 @@ void handleCommand(char command) {
   int ledIndex = -1;
 
   switch (command) {
-    case 'L': ledIndex = 0; break;
-    case 'R': ledIndex = 1; break;
-    case 'U': ledIndex = 2; break;
-    case 'D': ledIndex = 3; break;
+    case 'R': ledIndex = 0; break;
+    case 'L': ledIndex = 1; break;
+    case 'D': ledIndex = 2; break;
+    case 'U': ledIndex = 3; break;
     case 'F':
       Serial.println("Flash lights");
       for (int x = 0; x < 3; x++) {
